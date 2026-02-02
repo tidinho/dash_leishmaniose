@@ -1,8 +1,5 @@
 streamlit
 plotly
-folium 
+folium
 streamlit-folium
 scipy
-plotly
-plotly.express
-streamlit_folium
