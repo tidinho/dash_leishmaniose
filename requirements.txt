@@ -1,0 +1,8 @@
+streamlit
+plotly
+folium 
+streamlit-folium
+scipy
+plotly
+plotly.express
+streamlit_folium
