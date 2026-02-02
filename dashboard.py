@@ -5,7 +5,7 @@ import folium
 from folium.plugins import HeatMap
 from streamlit_folium import st_folium
 
-st.cache_data.clear()
+
 
 # ==================================================
 # CONFIGURAÇÃO
