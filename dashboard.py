@@ -5,8 +5,6 @@ import folium
 from folium.plugins import HeatMap
 from streamlit_folium import st_folium
 
-
-
 # ==================================================
 # CONFIGURAÇÃO
 # ==================================================
@@ -18,24 +16,15 @@ st.set_page_config(
 st.title("🦟 Dashboard Epidemiológico de Leishmaniose")
 st.markdown("Análise espacial, socioeconômica e ambiental dos casos")
 
-
 # ==================================================
 # CARREGAMENTO DOS DADOS
 # ==================================================
-df = pd.read_parquet("mega_tratados.parquet")
-
-
+df = pd.read_parquet("mega_tratados.parquet", engine="pyarrow")
 
 # ==================================================
 # TRATAMENTO DE DADOS
 # ==================================================
-
-# Data de notificação (fonte única)
-df["dt_notific"] = (
-    df["dt_notific"]
-    .astype(str)
-    .str.strip()
-)
+df["dt_notific"] = df["dt_notific"].astype(str).str.strip()
 
 df["dt_notific"] = pd.to_datetime(
     df["dt_notific"],
@@ -77,35 +66,22 @@ if "saneamento_basico" in df.columns:
 # ==================================================
 st.sidebar.header("🎛️ Filtros")
 
-# UF (global)
 ufs = sorted(df["sigla_uf"].dropna().unique())
 uf_sel = st.sidebar.multiselect("Estado (UF)", ufs, default=ufs)
 df_uf = df[df["sigla_uf"].isin(uf_sel)]
 
-# Município (depende da UF)
 municipios = sorted(df_uf["nm_mun"].dropna().unique())
 mun_sel = st.sidebar.multiselect("Município", municipios)
 df_mun = df_uf if not mun_sel else df_uf[df_uf["nm_mun"].isin(mun_sel)]
 
-# Unidade notificadora (depende do município)
 unidades = sorted(df_mun["no_fantasia"].dropna().unique())
 uni_sel = st.sidebar.multiselect("Unidade notificadora", unidades)
 df_uni = df_mun if not uni_sel else df_mun[df_mun["no_fantasia"].isin(uni_sel)]
 
-# ANO (DOMÍNIO GLOBAL — CORREÇÃO PRINCIPAL)
 anos = sorted(df["ano_notificacao"].dropna().unique())
+ano_sel = st.sidebar.multiselect("Ano de notificação", anos, default=anos)
 
-ano_sel = st.sidebar.multiselect(
-    "Ano de notificação",
-    anos,
-    default=anos
-)
-
-df_filt = (
-    df_uni
-    if not ano_sel
-    else df_uni[df_uni["ano_notificacao"].isin(ano_sel)]
-)
+df_filt = df_uni if not ano_sel else df_uni[df_uni["ano_notificacao"].isin(ano_sel)]
 
 # ==================================================
 # KPIs
@@ -161,56 +137,58 @@ fig_mun = px.bar(
 st.plotly_chart(fig_mun, use_container_width=True)
 
 # ==================================================
-# MAPA
+# MAPA DE PONTOS
 # ==================================================
-st.subheader("🗺️ Distribuição Geográfica dos Casos")
+with st.container():
+    st.subheader("🗺️ Distribuição Geográfica dos Casos")
 
-map_df = (
-    df_filt
-    .dropna(subset=["lat_locali", "long_local"])
-    .groupby(["nm_mun", "lat_locali", "long_local"], as_index=False)
-    .agg(casos=("casos", "sum"))
-)
+    map_df = (
+        df_filt
+        .dropna(subset=["lat_locali", "long_local"])
+        .groupby(["nm_mun", "lat_locali", "long_local"], as_index=False)
+        .agg(casos=("casos", "sum"))
+    )
 
-m = folium.Map(location=[-14.5, -52], zoom_start=4, tiles="cartodbpositron")
+    m = folium.Map(location=[-14.5, -52], zoom_start=4, tiles="cartodbpositron")
 
-for _, row in map_df.iterrows():
-    folium.CircleMarker(
-        location=[row["lat_locali"], row["long_local"]],
-        radius=min(row["casos"] / 2, 15),
-        color="red",
-        fill=True,
-        fill_opacity=0.6,
-        tooltip=f"<b>{row['nm_mun']}</b><br>Casos: {int(row['casos'])}"
-    ).add_to(m)
+    for _, row in map_df.iterrows():
+        folium.CircleMarker(
+            location=[row["lat_locali"], row["long_local"]],
+            radius=min(row["casos"] / 2, 15),
+            color="red",
+            fill=True,
+            fill_opacity=0.6,
+            tooltip=f"<b>{row['nm_mun']}</b><br>Casos: {int(row['casos'])}"
+        ).add_to(m)
 
-st_folium(m, width=1200, height=500)
+    st_folium(m, width=1200, height=500, key="mapa_casos")
 
 # ==================================================
 # HEATMAP
 # ==================================================
-st.subheader("🔥 Heatmap Espacial – Concentração de Casos")
+with st.container():
+    st.subheader("🔥 Heatmap Espacial – Concentração de Casos")
 
-heat_df = (
-    df_filt
-    .dropna(subset=["lat_locali", "long_local"])
-    .groupby(["lat_locali", "long_local"], as_index=False)
-    .agg(peso=("casos", "sum"))
-)
+    heat_df = (
+        df_filt
+        .dropna(subset=["lat_locali", "long_local"])
+        .groupby(["lat_locali", "long_local"], as_index=False)
+        .agg(peso=("casos", "sum"))
+    )
 
-radius = st.slider("Raio do Heatmap", 5, 40, 20)
-blur = st.slider("Blur", 5, 30, 15)
+    radius = st.slider("Raio do Heatmap", 5, 40, 20)
+    blur = st.slider("Blur", 5, 30, 15)
 
-m_heat = folium.Map(location=[-14.5, -52], zoom_start=4, tiles="cartodbpositron")
+    m_heat = folium.Map(location=[-14.5, -52], zoom_start=4, tiles="cartodbpositron")
 
-HeatMap(
-    heat_df[["lat_locali", "long_local", "peso"]].values.tolist(),
-    radius=radius,
-    blur=blur,
-    max_zoom=10
-).add_to(m_heat)
+    HeatMap(
+        heat_df[["lat_locali", "long_local", "peso"]].values.tolist(),
+        radius=radius,
+        blur=blur,
+        max_zoom=10
+    ).add_to(m_heat)
 
-st_folium(m_heat, width=1200, height=500)
+    st_folium(m_heat, width=1200, height=500, key="mapa_heat")
 
 # ==================================================
 # CASOS x INDICADORES
