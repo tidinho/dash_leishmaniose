@@ -4,7 +4,7 @@ import plotly.express as px
 import folium
 from folium.plugins import HeatMap
 from streamlit_folium import st_folium
-
+#ATU
 # ==================================================
 # CONFIGURAÇÃO
 # ==================================================
