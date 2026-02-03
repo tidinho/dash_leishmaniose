@@ -29,7 +29,7 @@ df = carregar_dados()
 # TRATAMENTO DE DADOS
 # ==================================================
 
-# ---------- DATAS (ROBUSTO) ----------
+# ---------- DATAS ----------
 df["dt_notific"] = (
     df["dt_notific"]
     .astype(str)
@@ -39,8 +39,7 @@ df["dt_notific"] = (
 
 df["dt_notific"] = pd.to_datetime(
     df["dt_notific"],
-    errors="coerce",
-    infer_datetime_format=True
+    errors="coerce"
 )
 
 df["ano_notificacao"] = df["dt_notific"].dt.year
@@ -93,6 +92,7 @@ st.sidebar.header("🎛️ Filtros")
 
 ufs = sorted(df["sigla_uf"].dropna().unique())
 uf_sel = st.sidebar.multiselect("Estado (UF)", ufs, default=ufs)
+
 df_filt = df[df["sigla_uf"].isin(uf_sel)]
 
 municipios = sorted(df_filt["nm_mun"].dropna().unique())
@@ -187,7 +187,7 @@ for _, row in map_df.iterrows():
         tooltip=f"<b>{row['nm_mun']}</b><br>Casos: {int(row['casos'])}"
     ).add_to(m)
 
-st_folium(m, width=1200, height=500, key="mapa_casos")
+st_folium(m, width=1200, height=500, key="mapa_pontos")
 
 # ==================================================
 # HEATMAP
