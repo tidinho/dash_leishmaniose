@@ -18,10 +18,26 @@ st.set_page_config(
 st.title("🦟 Dashboard Epidemiológico de Leishmaniose")
 st.markdown("Análise espacial, socioeconômica e ambiental dos casos")
 
+
+import os
+st.write("Arquivos no diretório:", os.listdir("."))
+
+
 # ==================================================
 # CARREGAMENTO DOS DADOS
 # ==================================================
-df = pd.read_parquet("mega_tratados.parquet")
+
+@st.cache_data(show_spinner="Carregando base de dados...")
+def load_data():
+    if not os.path.exists("mega_tratados.parquet"):
+        st.error("❌ Arquivo mega_tratados.parquet NÃO encontrado")
+        st.stop()
+
+    return pd.read_parquet(
+        "mega_tratados.parquet",
+        engine="pyarrow"
+    )
+
 
 
 
