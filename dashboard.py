@@ -23,11 +23,9 @@ st.markdown("Análise espacial, socioeconômica e ambiental dos casos")
 # ==================================================
 @st.cache_data(show_spinner="Carregando base de dados...")
 def load_data():
-    return pd.read_csv(
-        "dados_altamente_tratados.csv",
-        sep=",",
-        encoding="latin1",
-        engine="python"
+    return pd.read_parquet(
+        "mega_tratados.parquet",
+        engine="pyarrow"
     )
 
 df = load_data()
