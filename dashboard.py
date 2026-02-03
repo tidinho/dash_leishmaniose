@@ -227,7 +227,6 @@ fig_corr = px.scatter(
     rel_df,
     x=map_ind[indicador],
     y="casos",
-    trendline="ols",
     labels={"casos": "Total de Casos"}
 )
 
