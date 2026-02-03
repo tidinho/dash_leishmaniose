@@ -17,9 +17,9 @@ st.title("🦟 Dashboard Epidemiológico de Leishmaniose")
 st.markdown("Análise espacial, socioeconômica e ambiental dos casos")
 
 # ==================================================
-# CACHE DE DADOS (CRÍTICO)
+# CACHE DE DADOS
 # ==================================================
-@st.cache_data
+@st.cache_data(show_spinner=True)
 def carregar_dados():
     return pd.read_parquet("mega_tratados.parquet", engine="pyarrow")
 
@@ -28,21 +28,25 @@ df = carregar_dados()
 # ==================================================
 # TRATAMENTO DE DADOS
 # ==================================================
+
+# ---------- DATAS (ROBUSTO) ----------
 df["dt_notific"] = (
     df["dt_notific"]
     .astype(str)
     .str.strip()
+    .replace(["", "nan", "None"], pd.NA)
 )
 
 df["dt_notific"] = pd.to_datetime(
     df["dt_notific"],
     errors="coerce",
-    dayfirst=True
+    infer_datetime_format=True
 )
 
-df["ano_notificacao"] = df["dt_notific"].dt.year.astype("Int64")
+df["ano_notificacao"] = df["dt_notific"].dt.year
 df["casos"] = 1
 
+# ---------- NUMÉRICOS ----------
 num_cols = [
     "lat_locali",
     "long_local",
@@ -55,6 +59,7 @@ for col in num_cols:
     if col in df.columns:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
+# ---------- SANEAMENTO ----------
 if "saneamento_basico" in df.columns:
     df["saneamento_basico"] = (
         df["saneamento_basico"]
@@ -64,6 +69,22 @@ if "saneamento_basico" in df.columns:
     df["saneamento_basico"] = pd.to_numeric(
         df["saneamento_basico"], errors="coerce"
     )
+
+# ---------- LIMPEZA DE UF (CRÍTICO) ----------
+UF_VALIDAS = [
+    "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA",
+    "MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN",
+    "RS","RO","RR","SC","SP","SE","TO"
+]
+
+df["sigla_uf"] = (
+    df["sigla_uf"]
+    .astype(str)
+    .str.upper()
+    .str.strip()
+)
+
+df.loc[~df["sigla_uf"].isin(UF_VALIDAS), "sigla_uf"] = pd.NA
 
 # ==================================================
 # FILTROS
@@ -143,7 +164,7 @@ fig_mun = px.bar(
 st.plotly_chart(fig_mun, use_container_width=True)
 
 # ==================================================
-# MAPA DE PONTOS (ESTÁVEL)
+# MAPA DE PONTOS
 # ==================================================
 st.subheader("🗺️ Distribuição Geográfica dos Casos")
 
@@ -169,7 +190,7 @@ for _, row in map_df.iterrows():
 st_folium(m, width=1200, height=500, key="mapa_casos")
 
 # ==================================================
-# HEATMAP (CONTROLADO)
+# HEATMAP
 # ==================================================
 st.subheader("🔥 Heatmap Espacial – Concentração de Casos")
 
